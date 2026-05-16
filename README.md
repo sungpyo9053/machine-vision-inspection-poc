@@ -278,11 +278,11 @@ python scripts/evaluate_dataset.py --dataset data/eval --out data/eval_runs
 
 실 라인 운영에서는 “부적합품 출하 위험 vs. 과검 비용”에 따라 두 operating point 사이에서 튜닝합니다. 본 엔진은 한 파라미터 변경으로 둘 사이를 이동 가능하다는 점을 dataset evaluation harness가 정량적으로 입증합니다. 카테고리별로는 **scratch / stain / mixed**는 두 설정 모두 100% 정확, **dot**은 default에서 100% / tuned에서 0%.
 
-### 11.4 공개 데이터셋 적용 예시 — Magnetic Tile defect (392 images)
+### 11.4 공개 결함 데이터셋 적용 예시 — Magnetic Tile defect (392 images)
 
-> 본 결과는 dataset evaluation harness가 임의 라벨 폴더에 그대로 적용 가능함을 보이는 “first contact” 예시입니다. MVTec-AD, KolektorSDD2, Severstal Steel Defect 등 다른 공개 데이터셋도 동일 절차로 **확장 가능**합니다.
+> 본 결과는 dataset evaluation harness가 임의 라벨 폴더에 그대로 적용 가능함을 보이는 “first contact” 예시입니다. MVTec-AD, KolektorSDD2, Severstal Steel Defect 등 다른 공개 결함 데이터셋도 동일 절차로 **확장 가능**합니다.
 
-공개 데이터셋 [Magnetic-tile-defect-datasets](https://github.com/abin24/Magnetic-tile-defect-datasets)에 동일 엔진을 적용한 결과입니다. 정상 200장 + 결함 192장 (5개 카테고리: Blowhole, Break, Crack, Fray, Uneven).
+공개 결함 데이터셋 [Magnetic-tile-defect-datasets](https://github.com/abin24/Magnetic-tile-defect-datasets)에 동일 엔진을 적용한 결과입니다. 정상 200장 + 결함 192장 (5개 카테고리: Blowhole, Break, Crack, Fray, Uneven).
 
 ```bash
 git clone https://github.com/abin24/Magnetic-tile-defect-datasets..git /tmp/mtd
@@ -396,7 +396,7 @@ machine-vision-inspection-poc/
 
 ## 14. 한계점
 
-- 핵심 검증은 합성 데이터셋 기반이며, 실 광학계 / 조명 / 카메라 캘리브레이션은 적용되어 있지 않습니다. 공개 데이터셋 적용 예시(Magnetic Tile, 392장)는 §11.4에 게시되어 있으며 surface-specific tuning 전·후 두 operating point를 모두 보입니다.
+- 핵심 검증은 합성 데이터셋 기반이며, 실 광학계 / 조명 / 카메라 캘리브레이션은 적용되어 있지 않습니다. 공개 결함 데이터셋 적용 예시(Magnetic Tile, 392장)는 §11.4에 게시되어 있으며 surface-specific tuning 전·후 두 operating point를 모두 보입니다.
 - 룰베이스 검사만 다루며 학습 기반 결함 분류(예: CNN segmentation)는 다루지 않습니다. §11.4 결과는 텍스처 풍부한 표면에서는 cascade(룰베이스 1차 + 학습 분류기 2차) 또는 dome/coaxial 조명이 필수임을 시사합니다.
 - Modbus TCP 어댑터는 실 프로토콜이지만 검증은 in-process pymodbus 서버에 대한 라운드트립 수준입니다. Robot은 여전히 in-memory 시뮬레이터입니다 (UR/ABB RTDE 어댑터는 향후 작업).
 - 3D 데모는 합성 스테레오 페어로 disparity와 깊이 점프 가시화까지 보이는 mini-demo입니다 — 본격 point cloud / plane-fit 파이프라인은 후속 작업입니다.

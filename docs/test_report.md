@@ -18,15 +18,19 @@
 | `tests/test_stereo_demo.py` | StereoSGBM disparity, depth anomaly 합성 검증 | ❌ |
 | `tests/test_cpp_cli.py` | `vision_inspector` CLI / JSON 스키마 / OK·NG 분류 / CSV append | ✅ C++ 바이너리 필요 |
 
-현재 머신 상태(OpenCV/CMake 미설치) 기준 실행 결과: **15 passed, 5 skipped**.
+현재 빌드 + 설치 완료 환경 기준 실행 결과: **20 passed, 0 skipped**.
 
 ## C++ GoogleTest 매트릭스
 
 | 파일 | 검증 대상 |
 | --- | --- |
+| `cpp/tests/test_preprocessor.cpp` | `Preprocessor` 단계 (toGray / CLAHE / denoise / thresholdImage / 어댑티브 노브 전달) |
+| `cpp/tests/test_defect_detector.cpp` | `DefectDetector` findContours / filterNoise / RETR_EXTERNAL hole 무시 |
 | `cpp/tests/test_measurement.cpp` | `Measurement::pxToMm`, `pxAreaToMm2`, `measureDefect` (사각형 / 대각선 케이스) |
 | `cpp/tests/test_verdict.cpp` | `InspectionEngine::verdict` OK/NG 경계 + 트립 조건별 단위 검증 |
 | `cpp/tests/test_report_writer.cpp` | JSON 스키마 / CSV append (헤더 한 번) / JSON 문자열 이스케이프 |
+
+총 **26개 테스트** (ctest로 자동 실행).
 
 실행:
 
@@ -58,7 +62,7 @@ confusion_matrix.csv     # 2x2 OK/NG
 summary.json             # accuracy / precision_NG / recall_NG / F1_NG / per-category / avg_elapsed_ms
 ```
 
-MVTec-AD / KolektorSDD2 / Severstal 등 공개 데이터셋 적용 절차는 [`docs/dataset_evaluation.md`](dataset_evaluation.md) 참고.
+MVTec-AD / KolektorSDD2 / Severstal 등 공개 결함 데이터셋 적용 절차는 [`docs/dataset_evaluation.md`](dataset_evaluation.md) 참고.
 
 ## 성능 측정
 

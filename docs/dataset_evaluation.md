@@ -42,7 +42,7 @@ python scripts/evaluate_dataset.py --dataset data/datasets/magnetic_tile \
 - 정상 200장은 모두 false NG (precision 0.49)
 - 사이클 타임 ~51 ms/이미지
 
-이 결과는 “자성 타일의 표면 grain이 adaptive threshold의 ‘local mean보다 어두운 픽셀’ 정의를 그대로 만족시킨다”는 룰베이스의 본질적 한계를 정량적으로 보여줍니다. 자세한 시각적 분석과 cascade/lighting 보강 처방은 README §12.4 참조.
+이 결과는 “자성 타일의 표면 grain이 adaptive threshold의 ‘local mean보다 어두운 픽셀’ 정의를 그대로 만족시킨다”는 룰베이스의 본질적 한계를 정량적으로 보여줍니다. 자세한 시각적 분석과 cascade/lighting 보강 처방은 README §11.4 참조.
 
 ### 파라미터 sweep 결과 요약
 
@@ -76,7 +76,7 @@ F1 (NG)        : 0.912
    - `metal_nut/test/<defect_type>/*.png` → `NG`
 2. `labels.csv`를 만든다.
 3. `evaluate_dataset.py --dataset <폴더> --pixel-to-mm <캘리브레이션 값>` 으로 일괄 평가.
-4. 결과 confusion / 사이클 타임을 README §11.4 "공개 데이터셋 적용 예시" 표에 추가한다.
+4. 결과 confusion / 사이클 타임을 README §11.4 "공개 결함 데이터셋 적용 예시" 표에 추가한다.
 
 > 자동차 도장면 검사 설비 광학/조명 엔지니어링 경험까지 시연하려면 **MVTec-AD `metal_nut` + 합성 도장 결함**으로 두 케이스를 같이 보여주는 것이 효과적이다.
 

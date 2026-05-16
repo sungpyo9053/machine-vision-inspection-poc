@@ -26,3 +26,7 @@ data/stereo/
 .vscode/
 *.egg-info/
 .claude/
+
+# Personal interview / portfolio prep notes (kept local only)
+INTERVIEW.md
+
