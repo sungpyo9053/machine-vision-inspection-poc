@@ -67,6 +67,8 @@ if(VISION_INSPECTOR_BUILD_TESTS)
         tests/test_measurement.cpp
         tests/test_verdict.cpp
         tests/test_report_writer.cpp
+        tests/test_preprocessor.cpp
+        tests/test_defect_detector.cpp
     )
     target_link_libraries(vision_inspector_tests
         PRIVATE vision_inspector_core GTest::gtest_main)

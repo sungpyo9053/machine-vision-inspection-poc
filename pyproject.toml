@@ -1,0 +1,10 @@
+# Minimal pyproject — only the build-config that needs to live in the repo.
+# We are not packaging this project for PyPI; pytest is the primary consumer.
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra"
+testpaths = ["tests"]
+# Make `from interface.* import ...` and `from scripts.* import ...` work
+# without users having to manage PYTHONPATH manually.
+pythonpath = ["."]

@@ -1,0 +1,28 @@
+# Loosely based on Google C++ style with 4-space indentation to match the
+# existing source layout. Keep this in sync with how the repo is already
+# written so `clang-format -i` is a no-op on clean code.
+BasedOnStyle: Google
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+AccessModifierOffset: -4
+NamespaceIndentation: None
+PointerAlignment: Left
+DerivePointerAlignment: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+BinPackArguments: false
+BinPackParameters: false
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<.*\.h>'
+    Priority: 1
+  - Regex: '^<.*>'
+    Priority: 2
+  - Regex: '^<opencv2/.*>'
+    Priority: 3
+  - Regex: '^".*"'
+    Priority: 4
+SortIncludes: true
+ReflowComments: true
