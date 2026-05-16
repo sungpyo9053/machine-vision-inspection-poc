@@ -4,6 +4,14 @@ C++ OpenCV 기반의 표면 결함 검사 엔진입니다.
 자동차 도장면/금속/플라스틱 표면 이미지를 입력받아 전처리, 룰베이스 결함 검출, 결함 측정, OK/NG 판정, 결과 리포트 생성을 수행합니다.
 Python은 UI 및 장비 시뮬레이터 용도로만 사용하고, 핵심 검사 로직은 C++로 구현했습니다.
 
+추가로 포함된 것:
+- 실데이터 평가 하네스 (`scripts/evaluate_dataset.py` + 혼동행렬)
+- C# WinForms HMI (`csharp_hmi/`, 동일 `vision_inspector.exe` 호출)
+- 실 **Modbus TCP** PLC 어댑터 (`interface/plc_modbus.py`, pymodbus 기반)
+- C++ 성능 **벤치마크 모드** (`--benchmark N`) + Python 일괄 측정 스크립트
+- **GoogleTest** 기반 C++ 유닛 테스트
+- 3D **stereo + disparity** mini-demo (`scripts/stereo_demo.py`)
+
 ---
 
 ## 1. 프로젝트 개요
@@ -143,12 +151,43 @@ python scripts/generate_sample_images.py
 
 ## 11. 테스트 방법
 
+### Python 측 (항상 실행 가능)
+
 ```bash
 pytest -v
 ```
 
-- Python 시뮬레이터/시퀀스/샘플 생성기는 항상 실행됩니다.
-- C++ CLI 통합 테스트(`tests/test_cpp_cli.py`)는 `vision_inspector` 바이너리가 없으면 자동 skip합니다.
+- 시뮬레이터 / 시퀀스 / 샘플 생성기 / 데이터셋 평가 하네스 / Modbus 어댑터 / stereo 데모는 항상 실행됩니다.
+- `tests/test_cpp_cli.py`, `tests/test_eval_harness.py::test_end_to_end_eval`는 `vision_inspector` 바이너리가 없으면 자동 skip합니다.
+
+### C++ GoogleTest 측 (CMake 빌드 후)
+
+```bash
+cmake -S cpp -B build -DVISION_INSPECTOR_BUILD_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+GoogleTest는 CMake `FetchContent`로 자동 다운로드됩니다.
+`Measurement::pxToMm`, `InspectionEngine::verdict`, `ReportWriter::saveJsonReport`, `ReportWriter::appendCsv` 등 핵심 함수가 단위 테스트로 회귀 보호됩니다.
+
+### 실데이터셋 평가 (선택)
+
+```bash
+python scripts/generate_eval_dataset.py --out data/eval --count 40
+python scripts/evaluate_dataset.py --dataset data/eval --out data/eval_runs
+```
+
+`data/eval_runs/confusion_matrix.csv`, `summary.json`이 생성됩니다.
+MVTec-AD / KolektorSDD2 / Severstal로 교체 절차는 [`docs/dataset_evaluation.md`](docs/dataset_evaluation.md) 참고.
+
+### 성능 벤치마크
+
+```bash
+python scripts/benchmark_inspector.py --images data/sample_images --runs 50
+```
+
+`data/benchmark_runs/benchmark.md` (Markdown 표) + `benchmark.csv`가 생성됩니다.
 
 자세한 테스트 매트릭스는 [`docs/test_report.md`](docs/test_report.md) 참고.
 
@@ -195,40 +234,51 @@ machine-vision-inspection-poc/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
-├── docs/                     # 아키텍처 / 알고리즘 / 시퀀스 / 광학 노트 / 테스트 리포트
+├── docs/                     # architecture / algorithm / sequence / optics /
+│                             # cpp_design / dataset_evaluation / stereo_3d /
+│                             # test_report
 ├── cpp/                      # C++ 검사 엔진 (CMake 빌드)
-│   ├── CMakeLists.txt
+│   ├── CMakeLists.txt        # vision_inspector + (옵션) GoogleTest
 │   ├── include/              # 헤더 (Engine / Preprocessor / Detector / Measurement / ReportWriter ...)
-│   └── src/                  # 구현 + main.cpp
+│   ├── src/                  # 구현 + main.cpp (--benchmark N 포함)
+│   └── tests/                # GoogleTest 단위 테스트 (FetchContent)
 ├── app/streamlit_app.py      # Streamlit UI (C++ CLI 호출)
-├── interface/                # PLC / Camera / Robot 시뮬레이터 + 시퀀스 컨트롤러
-├── scripts/                  # 샘플 이미지 합성, C++ CLI Python wrapper
-├── data/                     # sample_images/ , results/  (gitignored)
-└── tests/                    # pytest 단위/통합 테스트
+├── csharp_hmi/               # C# WinForms HMI (.NET 8, Windows)
+│   └── VisionInspectorHmi/   #   동일 vision_inspector.exe 를 Process.Start
+├── interface/                # PLC/Camera/Robot 시뮬레이터 + SequenceController
+│   ├── plc_simulator.py      #   in-memory mock
+│   └── plc_modbus.py         #   실 Modbus TCP 어댑터 (pymodbus)
+├── scripts/                  # 샘플 이미지 합성, dataset 평가, 벤치마크, stereo demo,
+│                             # C++ CLI Python wrapper
+├── data/                     # sample_images/, results/, eval/, eval_runs/,
+│                             # benchmark_runs/, stereo/  (대부분 gitignored)
+└── tests/                    # pytest 단위/통합 테스트 (Python)
 ```
 
 ## 14. 기술 스택
 
-- **C++17**, **OpenCV 4.x**, **CMake 3.14+**
-- **Python 3.9+** (3.8도 동작), `streamlit`, `opencv-python`, `numpy`, `pandas`, `matplotlib`, `pytest`, `pillow`
-- 빌드 / 실행: macOS, Ubuntu, Windows (CMake 표준 흐름)
+- **C++17**, **OpenCV 4.x**, **CMake 3.14+**, **GoogleTest 1.14** (FetchContent)
+- **Python 3.9+** (3.8도 동작), `streamlit`, `opencv-python`, `numpy`, `pandas`, `matplotlib`, `pytest`, `pillow`, `pymodbus`
+- **C# / .NET 8 (WinForms)** — `csharp_hmi/VisionInspectorHmi`
+- **Modbus TCP** — `pymodbus` (실 프로토콜 라운드트립 자체 테스트 포함)
+- 빌드 / 실행: macOS, Ubuntu, Windows (CMake 표준 흐름, .NET은 Windows 실행)
 
 ## 15. 한계점
 
-- 실제 광학계 / 조명 / 카메라 캘리브레이션이 적용되지 않은 합성 이미지 기반 POC입니다.
+- 합성 이미지 기반 검증이 중심이며, 실제 광학계 / 조명 / 카메라 캘리브레이션은 적용되어 있지 않습니다. (단, MVTec-AD 등 실데이터셋으로 동일 엔진을 평가할 수 있는 하네스는 포함되어 있습니다.)
 - 룰베이스 검사만 다루며 학습 기반 결함 분류(예: CNN segmentation)는 다루지 않습니다.
-- PLC / Robot 인터페이스가 실제 산업 통신 프로토콜이 아닌 Python in-memory 시뮬레이터입니다.
-- C++ 측 단위 테스트 프레임워크(GoogleTest)는 도입하지 않았으며 CLI 통합 테스트로 회귀를 잡습니다.
+- Modbus TCP 어댑터는 실 프로토콜이지만 검증은 in-process pymodbus 서버에 대한 라운드트립 수준입니다. Robot은 여전히 in-memory 시뮬레이터입니다 (UR/ABB RTDE 어댑터는 향후 작업).
+- 3D 데모는 합성 스테레오 페어로 disparity와 깊이 점프 가시화까지 보이는 mini-demo입니다 — 본격 point cloud / plane-fit 파이프라인은 후속 작업입니다.
 
 ## 16. 개선 방향
 
-- 실 데이터셋으로 알고리즘 임계값 / morphology 커널 재튜닝
+- MVTec-AD / KolektorSDD2 / Severstal 등 실데이터셋으로 임계값 그리드 서치 자동화 (현재 `evaluate_dataset.py` 위에 한 겹만 더 두면 됨)
 - Pylon / Spinnaker / Vimba SDK를 사용하는 Camera 어댑터 추가 (`CameraSimulator` 대체)
-- PyModbus / open62541 기반 PLC 어댑터, UR/ABB RTDE Robot 어댑터 추가
-- 결함 분류기(예: CNN) 추가 시 본 룰베이스 결과를 1차 필터로 두는 cascade 구조
-- C# WinForms HMI 추가 (동일 C++ CLI 재사용)
-- GoogleTest 도입으로 `Measurement::pxToMm`, `verdict()` 등 unit-level 회귀 강화
-- 멀티스레드 인스펙션 큐 (`InspectionEngine` stateless 설계 활용)
+- open62541(OPC-UA) / EtherCAT 어댑터, UR/ABB RTDE Robot 어댑터 추가 (현재 Modbus만 실 프로토콜)
+- 결함 분류기(예: CNN segmentation) 추가 시 본 룰베이스 결과를 1차 필터로 두는 cascade 구조
+- 3D 모듈을 실 스테레오 카메라 + plane-fit residual / point-cloud normal 기반으로 확장 (현재 합성 disparity demo)
+- 멀티스레드 인스펙션 큐 (`InspectionEngine` stateless 설계 활용) — 1대 PC에서 다중 카메라 라인 처리
+- GoogleTest 커버리지를 Preprocessor / DefectDetector 까지 확장 (현재 Measurement / Verdict / ReportWriter)
 
 ---
 

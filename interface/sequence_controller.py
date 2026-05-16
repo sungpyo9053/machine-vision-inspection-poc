@@ -45,6 +45,9 @@ class SequenceResult:
 class SequenceController:
     inspector_cfg: InspectorConfig = field(default_factory=InspectorConfig)
     output_dir: str = os.path.join("data", "results")
+    # Optional Modbus adapter; if provided it is called alongside the in-memory
+    # PLC simulator so the controller exercises a real PLC protocol end-to-end.
+    modbus_plc: object = None
 
     def _attach(self, sink_list: List[str]):
         def _sink(message: str) -> None:
@@ -61,8 +64,27 @@ class SequenceController:
 
         seq = SequenceResult(image_path=image_path, logs=logs)
 
+        def _push_modbus(result: str, defect_count: int,
+                         max_area: float, max_length: float) -> None:
+            if self.modbus_plc is None:
+                return
+            try:
+                self.modbus_plc.log_sink = sink
+                self.modbus_plc.write_result(result, defect_count=defect_count,
+                                             max_area_mm2=max_area,
+                                             max_length_mm=max_length)
+            except Exception as exc:
+                logs.append(f"[PLC:modbus] write_result_failed {exc}")
+
         try:
             plc.trigger_on()
+            if self.modbus_plc is not None:
+                try:
+                    self.modbus_plc.log_sink = sink
+                    self.modbus_plc.trigger_on()
+                except Exception as exc:
+                    logs.append(f"[PLC:modbus] trigger_failed {exc}")
+
             captured = camera.capture(image_path)
             logs.append("[VISION] inspection_started")
 
@@ -73,17 +95,22 @@ class SequenceController:
                 f"[VISION] defect_count={seq.defect_count} result={seq.result}"
             )
             plc.write_result(seq.result)
+            _push_modbus(seq.result, seq.defect_count,
+                         float(seq.raw_report.get("max_area_mm2", 0.0)),
+                         float(seq.raw_report.get("max_length_mm", 0.0)))
             robot.move_next_position()
         except InspectorBinaryNotFound as exc:
             seq.result = "ERROR"
             seq.error = str(exc)
             logs.append(f"[VISION] error binary_missing")
             plc.write_result("ERROR")
+            _push_modbus("ERROR", 0, 0.0, 0.0)
         except (InspectorRunError, FileNotFoundError) as exc:
             seq.result = "ERROR"
             seq.error = str(exc)
             logs.append(f"[VISION] error {type(exc).__name__}")
             plc.write_result("ERROR")
+            _push_modbus("ERROR", 0, 0.0, 0.0)
 
         return seq
 

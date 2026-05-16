@@ -1,6 +1,10 @@
+#include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <numeric>
 #include <string>
+#include <vector>
 
 #include "InspectionConfig.hpp"
 #include "InspectionEngine.hpp"
@@ -16,7 +20,9 @@ void printUsage() {
         "                   [--max-defect-count <int>]\n"
         "                   [--max-defect-area-mm2 <double>]\n"
         "                   [--max-defect-length-mm <double>]\n"
-        "                   [--min-contour-area-px <int>]\n";
+        "                   [--min-contour-area-px <int>]\n"
+        "                   [--benchmark <N>]   # repeat the inspection N times\n"
+        "                                       # and print timing statistics\n";
 }
 
 bool needsValue(int& i, int argc, char** argv, const std::string& opt) {
@@ -34,6 +40,7 @@ int main(int argc, char** argv) {
     std::string imagePath;
     std::string outputDir = "data/results";
     mvi::InspectionConfig cfg;
+    int benchmarkRuns = 0;
 
     for (int i = 1; i < argc; ++i) {
         const std::string opt = argv[i];
@@ -58,6 +65,13 @@ int main(int argc, char** argv) {
         } else if (opt == "--min-contour-area-px") {
             if (!needsValue(i, argc, argv, opt)) return EXIT_FAILURE;
             cfg.minContourAreaPx = std::stoi(argv[i]);
+        } else if (opt == "--benchmark") {
+            if (!needsValue(i, argc, argv, opt)) return EXIT_FAILURE;
+            benchmarkRuns = std::stoi(argv[i]);
+            if (benchmarkRuns <= 0) {
+                std::cerr << "--benchmark requires N > 0\n";
+                return EXIT_FAILURE;
+            }
         } else if (opt == "--help" || opt == "-h") {
             printUsage();
             return EXIT_SUCCESS;
@@ -76,6 +90,46 @@ int main(int argc, char** argv) {
 
     try {
         mvi::InspectionEngine engine;
+
+        if (benchmarkRuns > 0) {
+            using clock = std::chrono::steady_clock;
+            // Warm-up (first call hits OpenCV's lazy allocators) so the
+            // reported numbers aren't skewed by one-off setup cost.
+            engine.inspect(imagePath, outputDir, cfg);
+
+            std::vector<double> samples;
+            samples.reserve(static_cast<size_t>(benchmarkRuns));
+            for (int i = 0; i < benchmarkRuns; ++i) {
+                const auto t0 = clock::now();
+                const auto r = engine.inspect(imagePath, outputDir, cfg);
+                const auto t1 = clock::now();
+                samples.push_back(
+                    std::chrono::duration<double, std::milli>(t1 - t0).count());
+                (void)r;  // silence unused-warning
+            }
+            std::sort(samples.begin(), samples.end());
+            const double sum = std::accumulate(samples.begin(),
+                                               samples.end(), 0.0);
+            const double avg = sum / static_cast<double>(samples.size());
+            const double minMs = samples.front();
+            const double maxMs = samples.back();
+            const double p50 = samples[samples.size() / 2];
+            const double p95 = samples[static_cast<size_t>(
+                samples.size() * 0.95)];
+
+            std::cout << "benchmark"
+                      << " runs=" << benchmarkRuns
+                      << " image=" << imagePath
+                      << " avg_ms=" << avg
+                      << " min_ms=" << minMs
+                      << " p50_ms=" << p50
+                      << " p95_ms=" << p95
+                      << " max_ms=" << maxMs
+                      << " fps=" << (1000.0 / avg)
+                      << "\n";
+            return EXIT_SUCCESS;
+        }
+
         const auto result = engine.inspect(imagePath, outputDir, cfg);
         std::cout << "image=" << result.imageName
                   << " result=" << result.result

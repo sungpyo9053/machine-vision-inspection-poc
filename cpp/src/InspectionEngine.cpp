@@ -40,14 +40,17 @@ std::string currentTimestamp() {
     return oss.str();
 }
 
-std::string verdict(const InspectionResult& r, const InspectionConfig& cfg) {
-    if (r.defectCount > cfg.maxDefectCount) return "NG";
-    if (r.maxAreaMm2 > cfg.maxDefectAreaMm2) return "NG";
-    if (r.maxLengthMm > cfg.maxDefectLengthMm) return "NG";
+}  // namespace
+
+std::string InspectionEngine::verdict(int defectCount,
+                                      double maxAreaMm2,
+                                      double maxLengthMm,
+                                      const InspectionConfig& cfg) {
+    if (defectCount > cfg.maxDefectCount) return "NG";
+    if (maxAreaMm2 > cfg.maxDefectAreaMm2) return "NG";
+    if (maxLengthMm > cfg.maxDefectLengthMm) return "NG";
     return "OK";
 }
-
-}  // namespace
 
 InspectionResult InspectionEngine::inspect(const std::string& imagePath,
                                            const std::string& outputDir,
@@ -86,7 +89,8 @@ InspectionResult InspectionEngine::inspect(const std::string& imagePath,
         result.defects.push_back(std::move(d));
     }
     result.defectCount = static_cast<int>(result.defects.size());
-    result.result = verdict(result, cfg);
+    result.result = verdict(result.defectCount, result.maxAreaMm2,
+                            result.maxLengthMm, cfg);
 
     ReportWriter writer;
     result.resultImagePath = writer.saveResultImage(bgr, result, outputDir);

@@ -16,6 +16,10 @@ data/results/*
 !data/results/.gitkeep
 data/sample_images/*
 !data/sample_images/.gitkeep
+data/eval/
+data/eval_runs/
+data/datasets/
+data/benchmark_runs/
 .DS_Store
 .idea/
 .vscode/
