@@ -48,7 +48,7 @@ ctest --test-dir build --output-on-failure
 
 `test_cpp_cli.py::test_normal_surface_is_ok`, `test_scratch_surface_detects_defect`, `test_csv_is_appended`가 이 중 핵심을 자동 검증한다.
 
-## 실데이터셋 평가
+## Dataset evaluation harness 적용 (공개 결함 데이터셋)
 
 `scripts/evaluate_dataset.py`는 임의 라벨 폴더(`labels.csv`)에 대해 검사를 일괄 실행하고 다음을 출력한다.
 
@@ -72,6 +72,6 @@ benchmark runs=50 image=... avg_ms=12.3 min_ms=10.1 p50_ms=12.0 p95_ms=18.5 max_
 
 ## 한계점
 
-- 합성 이미지는 실제 도장면 / 금속 / 플라스틱의 specular highlight / 텍스처 패턴을 완벽히 재현하지 않는다. 실 데이터셋 검증 시 임계값과 morphology 커널 크기 재튜닝 필요.
+- 합성 이미지는 실제 도장면 / 금속 / 플라스틱의 specular highlight / 텍스처 패턴을 완벽히 재현하지 않는다. 공개 결함 데이터셋 검증 시 임계값과 morphology 커널 크기 재튜닝이 필요하다.
 - Modbus 어댑터는 in-process pymodbus 서버에 대한 라운드트립까지 검증한다. 실 PLC 적용 시 vendor-specific 변환(예: ABB / Siemens float layout)이 필요할 수 있다.
 - GoogleTest 커버리지는 `Measurement` / `verdict` / `ReportWriter` 중심이며 `Preprocessor`, `DefectDetector`의 OpenCV 의존 부분은 CLI 통합 테스트로 회귀한다.

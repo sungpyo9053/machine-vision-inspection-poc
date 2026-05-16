@@ -25,9 +25,9 @@ img_0014_scratch.png,NG,scratch
 - `confusion_matrix.csv` — 2×2 OK/NG
 - `summary.json` — accuracy / precision / recall / F1 / per-category 통계 / 평균 cycle time
 
-## 2. 실 데이터셋 적용 (Magnetic Tile)
+## 2. 공개 결함 데이터셋 적용 (Magnetic Tile)
 
-가장 즉시 시도해볼 수 있는 공개 데이터셋은 [Magnetic-tile-defect-datasets](https://github.com/abin24/Magnetic-tile-defect-datasets)입니다 (학술용, 회원가입 없이 git clone).
+가장 즉시 시도해볼 수 있는 공개 결함 데이터셋은 [Magnetic-tile-defect-datasets](https://github.com/abin24/Magnetic-tile-defect-datasets)입니다 (학술용, 회원가입 없이 git clone).
 
 ```bash
 git clone https://github.com/abin24/Magnetic-tile-defect-datasets..git /tmp/mtd
@@ -76,7 +76,7 @@ F1 (NG)        : 0.912
    - `metal_nut/test/<defect_type>/*.png` → `NG`
 2. `labels.csv`를 만든다.
 3. `evaluate_dataset.py --dataset <폴더> --pixel-to-mm <캘리브레이션 값>` 으로 일괄 평가.
-4. 결과 confusion / 사이클 타임을 README의 “실데이터 결과” 표에 추가한다.
+4. 결과 confusion / 사이클 타임을 README §11.4 "공개 데이터셋 적용 예시" 표에 추가한다.
 
 > 자동차 도장면 검사 설비 광학/조명 엔지니어링 경험까지 시연하려면 **MVTec-AD `metal_nut` + 합성 도장 결함**으로 두 케이스를 같이 보여주는 것이 효과적이다.
 

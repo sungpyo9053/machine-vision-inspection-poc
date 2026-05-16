@@ -187,12 +187,14 @@ ctest --test-dir build --output-on-failure
 26개 단위 테스트가 Preprocessor / DefectDetector / Measurement / InspectionEngine::verdict / ReportWriter 5개 클래스를 커버합니다.
 GoogleTest는 CMake `FetchContent`로 빌드 시 자동 다운로드됩니다 (네트워크 필요 — 오프라인/사내망 환경에서는 §환경 준비 참고).
 
-### 실데이터셋 평가 (선택)
+### Dataset evaluation harness 적용 (선택)
 
 ```bash
 python scripts/generate_eval_dataset.py --out data/eval --count 40
 python scripts/evaluate_dataset.py --dataset data/eval --out data/eval_runs
 ```
+
+위 합성 데이터셋 대신 공개 결함 데이터셋(예: MVTec-AD, KolektorSDD2, Severstal Steel Defect, 또는 §11.4에서 사용한 Magnetic Tile)에도 같은 명령으로 그대로 적용 가능합니다.
 
 `data/eval_runs/confusion_matrix.csv`, `summary.json`이 생성됩니다.
 MVTec-AD / KolektorSDD2 / Severstal로 교체 절차는 [`docs/dataset_evaluation.md`](docs/dataset_evaluation.md) 참고.
@@ -401,7 +403,7 @@ machine-vision-inspection-poc/
 
 ## 15. 개선 방향
 
-- MVTec-AD / KolektorSDD2 / Severstal 등 실데이터셋으로 임계값 그리드 서치 자동화 (현재 `evaluate_dataset.py` 위에 한 겹만 더 두면 됨)
+- MVTec-AD / KolektorSDD2 / Severstal 등 공개 결함 데이터셋으로 임계값 그리드 서치 자동화 (현재 `evaluate_dataset.py` 위에 한 겹만 더 두면 됨)
 - Pylon / Spinnaker / Vimba SDK를 사용하는 Camera 어댑터 추가 (`CameraSimulator` 대체)
 - open62541(OPC-UA) / EtherCAT 어댑터, UR/ABB RTDE Robot 어댑터 추가 (현재 Modbus만 실 프로토콜)
 - 결함 분류기(예: CNN segmentation) 추가 시 본 룰베이스 결과를 1차 필터로 두는 cascade 구조

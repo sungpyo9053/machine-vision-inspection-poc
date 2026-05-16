@@ -38,5 +38,5 @@ data/stereo/
 ## 한계
 
 - 합성 좌우 페어이므로 occlusion / specular highlight 영향은 재현되지 않음
-- StereoSGBM 파라미터는 본 데모의 합성 데이터에 맞춘 값. 실데이터에서는 튜닝 필요
+- StereoSGBM 파라미터는 본 데모의 합성 데이터에 맞춘 값. 공개 결함 데이터셋 / 실 스테레오 카메라에 적용 시 재튜닝 필요
 - 실 3D 검사는 결국 **point cloud 처리(PCL, Open3D)** 가 핵심이며, 본 데모는 그 전 단계까지만 다룬다
