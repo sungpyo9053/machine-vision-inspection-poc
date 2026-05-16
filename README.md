@@ -31,15 +31,15 @@ Streamlit UI와 시뮬레이터는 라인 PC 측 SW 동작을 재현하기 위�
 
 | 채용 직무 요구 | 본 프로젝트 대응 |
 | --- | --- |
-| 머신비전 시스템 구축 프로젝트 경험 | C++ OpenCV 엔진 + Camera/PLC/Robot 시뮬레이터 + Streamlit UI 일체 구축 |
-| 로보틱스 영상처리 알고리즘 개발 경험 | C++ 전처리 → contour → 측정 → 판정 파이프라인 직접 설계 |
-| 카메라/로봇/PLC 인터페이스 개발 경험 | `interface/` 시뮬레이터 + `SequenceController` 오케스트레이션 |
-| 비전 시험 및 CS 경험 | pytest CLI 통합 테스트, 합성 케이스 별 기대 판정 정의 |
-| 2D/3D 광학계 및 조명 테스트 | `docs/camera_lighting_note.md`에 조명 영향 / 한계 명시 |
-| 룰베이스 영상처리 알고리즘 개발 | OK/NG 판정 룰을 코드/문서에 명문화 |
-| 검사 기능 설계/개발 | `InspectionEngine` 단일 진입점 설계, 측정/판정 분리 |
-| UI 포함 | Streamlit UI에서 C++ CLI 호출, 결함 테이블/메트릭 시각화 |
-| C++, C# 우대 | C++17 + CMake 빌드 구조, 동일 CLI를 C# HMI로 호출 가능 |
+| 머신비전시스템 구축 프로젝트 경험 | C++ OpenCV 엔진 + Camera/PLC/Robot 시뮬레이터 + Streamlit UI + C# WinForms HMI |
+| 로보틱스 영상처리 알고리즘 개발 경험 | C++ 전처리 → contour → 측정 → 판정 파이프라인 + GoogleTest 단위 테스트 |
+| 카메라/로봇/PLC 인터페이스 개발 경험 | Python 시뮬레이터 + **실 Modbus TCP 어댑터(pymodbus)** + `SequenceController` |
+| 비전 시험 및 CS 경험 | pytest 단위/통합 + C++ GoogleTest + **데이터셋 평가 하네스(confusion matrix)** |
+| 2D/3D 광학계 및 조명 테스트 | CLAHE / adaptive threshold 선택 사유 문서화 + **stereo disparity 3D mini-demo** |
+| 룰베이스 영상처리 알고리즘 개발 | OK/NG 판정 룰을 코드/문서/단위 테스트에 명문화 |
+| 검사 기능 설계/개발 | `InspectionEngine` 단일 진입점 + stateless 분리 + `--benchmark N` 성능 측정 |
+| UI 포함 | Streamlit UI **+ C# WinForms HMI** 두 가지 (둘 다 동일 C++ CLI 호출) |
+| C++, C# 우대 | C++17 + CMake + GoogleTest, .NET 8 WinForms HMI |
 
 ## 3. 기존 C++ 경력과 머신비전 직무 연결
 
@@ -193,35 +193,89 @@ python scripts/benchmark_inspector.py --images data/sample_images --runs 50
 
 ## 12. 검사 결과 예시
 
-검사를 1회 실행하면 다음 파일이 생성됩니다.
+### 12.1 시각 결과 (default 임계)
 
-```
-data/results/
-  result_scratch_surface.png            # 결함 bbox + 판정 배너 오버레이
-  inspection_report_scratch_surface.json # 결함별 상세 (defect_id, bbox, center, area, length…)
-  inspection_results.csv                 # 1행 = 1회 검사, append-only 누적 로그
+512×512 합성 표면 5종에 대한 실제 엔진 출력입니다. 초록 = OK, 빨강 = NG bbox + 면적 라벨.
+
+| | | |
+| --- | --- | --- |
+| **OK (정상)** | **NG — scratch** | **NG — dot defects** |
+| ![normal](docs/images/result_normal_surface.png) | ![scratch](docs/images/result_scratch_surface.png) | ![dots](docs/images/result_dot_defect_surface.png) |
+| **NG — stain** | **NG — mixed** | |
+| ![stain](docs/images/result_stain_surface.png) | ![mixed](docs/images/result_mixed_defects_surface.png) | |
+
+5개 케이스 모두 의도한 룰을 정확히 트립:
+
+| 이미지 | 판정 | 결함 수 | max area (mm²) | max length (mm) | 트립 룰 |
+| --- | --- | ---: | ---: | ---: | --- |
+| `normal_surface.png` | **OK** | 0 | 0.00 | 0.00 | — |
+| `scratch_surface.png` | **NG** | 1 | 6.47 | 21.57 | length > 5.0 |
+| `dot_defect_surface.png` | **NG** | 5 | 0.37 | 0.69 | count > 3 |
+| `stain_surface.png` | **NG** | 1 | 25.33 | 7.08 | area > 2.0 + length > 5.0 |
+| `mixed_defects_surface.png` | **NG** | 5 | 6.44 | 13.07 | 모든 룰 트립 |
+
+### 12.2 성능 (macOS Intel x86_64, OpenCV 4.13, Release 빌드, `--benchmark 50`)
+
+```bash
+python scripts/benchmark_inspector.py --images data/sample_images --runs 50
 ```
 
-JSON 예시 (요약):
+| image | runs | avg (ms) | min | p50 | p95 | max | fps |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| dot_defect_surface.png | 50 | 20.85 | 19.17 | 20.61 | 22.24 | 23.81 | 48.0 |
+| mixed_defects_surface.png | 50 | 20.74 | 19.53 | 20.57 | 21.90 | 22.41 | 48.2 |
+| normal_surface.png | 50 | 20.71 | 18.97 | 19.87 | 22.23 | 47.09 | 48.3 |
+| scratch_surface.png | 50 | 20.78 | 19.64 | 20.63 | 22.24 | 22.62 | 48.1 |
+| stain_surface.png | 50 | 12.06 | 11.25 | 11.84 | 13.52 | 14.09 | 82.9 |
+
+512×512 단일 카메라 기준 **~50 fps** 처리. PNG I/O와 결과 이미지 저장을 포함한 end-to-end 사이클 타임이고, 알고리즘 자체는 더 짧습니다. 멀티 카메라 라인에서는 `InspectionEngine`의 stateless 설계 덕분에 인스펙션 큐를 멀티스레드로 확장 가능합니다.
+
+### 12.3 데이터셋 평가 — 두 operating point
+
+80장 합성 평가셋 (정상 28장 + 결함 52장, 조명 그라데이션 + specular highlight + paint grain 포함):
+
+```bash
+python scripts/generate_eval_dataset.py --out data/eval --count 80 --seed 42
+python scripts/evaluate_dataset.py --dataset data/eval --out data/eval_runs
+```
+
+| 설정 | accuracy | precision (NG) | recall (NG) | F1 (NG) | confusion (TP/TN/FP/FN) | 의미 |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| **default** (`min_contour_area_px=30`) | 0.650 | 0.650 | **1.000** | 0.788 | 52 / 0 / 28 / 0 | 모든 NG 검출, 정상의 specular highlight를 오인 |
+| **tuned** (`min_contour_area_px=500`) | 0.838 | **1.000** | 0.750 | 0.857 | 39 / 28 / 0 / 13 | 오검출 0, 작은 dot 결함은 노이즈 floor 아래로 누락 |
+
+실 라인 운영에서는 “부적합품 출하 위험 vs. 과검 비용”에 따라 둘 사이에서 튜닝합니다. 본 엔진은 두 operating point가 한 파라미터 변경으로 이동 가능하다는 점을 평가 하네스가 정량적으로 입증합니다. 카테고리별로는 **scratch/stain/mixed 결함은 두 설정 모두 100% 정확**, **dot 결함은 default에서 100% / tuned에서 0%**.
+
+이 평가 하네스는 동일 CLI로 MVTec-AD / KolektorSDD2 / Severstal에 그대로 사용할 수 있습니다. 절차는 [`docs/dataset_evaluation.md`](docs/dataset_evaluation.md) 참고.
+
+### 12.4 3D stereo mini-demo
+
+`scripts/stereo_demo.py`는 합성 스테레오 페어를 생성하고 StereoSGBM disparity + depth jump anomaly를 시각화합니다. "BUMP" 영역은 표면 휘도가 배경과 같지만 **깊이가 다르므로** 2D 룰베이스로는 못 잡고 3D만 잡을 수 있습니다.
+
+![stereo](docs/images/stereo_depth_anomaly.png)
+
+흰 영역이 BUMP (배경보다 가까움, 높은 disparity), 빨간 점은 “주변 median disparity와 4px 이상 차이” = depth anomaly. 자세한 내용은 [`docs/stereo_3d.md`](docs/stereo_3d.md).
+
+### 12.5 JSON 리포트 스키마 (`scratch_surface.png` 실 출력)
 
 ```json
 {
   "image_name": "scratch_surface",
   "result": "NG",
   "defect_count": 1,
-  "max_area_mm2": 0.9512,
-  "max_length_mm": 26.83,
-  "total_area_mm2": 0.9512,
-  "created_at": "2026-05-16T09:30:01",
+  "max_area_mm2": 6.4675,
+  "max_length_mm": 21.5672,
+  "total_area_mm2": 6.4675,
+  "created_at": "2026-05-16T...",
   "defects": [
     {
       "defect_id": 1,
       "bbox": {"x": 76, "y": 152, "w": 365, "h": 232},
       "center": {"x": 256.3, "y": 268.2},
-      "area_px": 380.5,
-      "area_mm2": 0.9512,
-      "length_px": 536.5,
-      "length_mm": 26.83
+      "area_px": 2587.0,
+      "area_mm2": 6.4675,
+      "length_px": 431.3,
+      "length_mm": 21.5672
     }
   ]
 }
