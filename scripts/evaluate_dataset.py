@@ -214,6 +214,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--max-defect-area-mm2", type=float, default=2.0)
     p.add_argument("--max-defect-length-mm", type=float, default=5.0)
     p.add_argument("--min-contour-area-px", type=int, default=30)
+    p.add_argument("--adaptive-block-size", type=int, default=51)
+    p.add_argument("--adaptive-c", type=float, default=10.0)
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--binary", default=None)
     args = p.parse_args(argv)
@@ -224,6 +226,8 @@ def main(argv: list[str] | None = None) -> int:
         max_defect_area_mm2=args.max_defect_area_mm2,
         max_defect_length_mm=args.max_defect_length_mm,
         min_contour_area_px=args.min_contour_area_px,
+        adaptive_block_size=args.adaptive_block_size,
+        adaptive_c=args.adaptive_c,
     )
     try:
         evaluate(args.dataset, args.out, cfg=cfg, binary=args.binary,

@@ -71,7 +71,7 @@ InspectionResult InspectionEngine::inspect(const std::string& imagePath,
     }
 
     Preprocessor pre;
-    cv::Mat binary = pre.preprocess(bgr);
+    cv::Mat binary = pre.preprocess(bgr, cfg);
 
     DefectDetector detector;
     auto contours = detector.detect(binary, cfg);

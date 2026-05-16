@@ -49,6 +49,8 @@ class InspectorConfig:
     max_defect_area_mm2: float = 2.0
     max_defect_length_mm: float = 5.0
     min_contour_area_px: int = 30
+    adaptive_block_size: int = 51
+    adaptive_c: float = 10.0
 
     def as_cli_args(self) -> list[str]:
         return [
@@ -57,6 +59,8 @@ class InspectorConfig:
             "--max-defect-area-mm2", str(self.max_defect_area_mm2),
             "--max-defect-length-mm", str(self.max_defect_length_mm),
             "--min-contour-area-px", str(self.min_contour_area_px),
+            "--adaptive-block-size", str(self.adaptive_block_size),
+            "--adaptive-c", str(self.adaptive_c),
         ]
 
 

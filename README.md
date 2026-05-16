@@ -1,5 +1,7 @@
 # C++ Machine Vision Inspection System POC
 
+[![CI](https://github.com/sungpyo9053/machine-vision-inspection-poc/actions/workflows/ci.yml/badge.svg)](https://github.com/sungpyo9053/machine-vision-inspection-poc/actions/workflows/ci.yml)
+
 C++ OpenCV 기반의 표면 결함 검사 엔진입니다.
 자동차 도장면/금속/플라스틱 표면 이미지를 입력받아 전처리, 룰베이스 결함 검출, 결함 측정, OK/NG 판정, 결과 리포트 생성을 수행합니다.
 Python은 UI 및 장비 시뮬레이터 용도로만 사용하고, 핵심 검사 로직은 C++로 구현했습니다.
@@ -103,9 +105,14 @@ InspectionEngine ─┬─► Preprocessor      (전처리)
 streamlit run app/streamlit_app.py
 ```
 
+scratch_surface.png 검사 결과 화면:
+
+![streamlit-ui](docs/images/streamlit_ui_result.png)
+
 - 좌측 사이드바: 이미지 업로드 / 샘플 선택 / 파라미터 조정 / 검사 시작 버튼
-- 메인: 원본 vs 결과 이미지 / 큰 OK·NG 배너 / 결함 메트릭 / 결함 리스트 / 검사 로그
+- 메인: 원본 vs 결과 이미지 / 큰 OK·NG 배너 / 결함 메트릭 (개수·최대 면적·최대 길이·총 면적) / 결함 리스트 테이블 / 검사 로그
 - `vision_inspector` 바이너리가 없으면 빌드 안내 메시지가 사이드바에 표시됩니다.
+- 위 스크린샷은 `scripts/capture_ui_screenshot.py` 로 재현 가능 (Playwright 사용).
 
 ## 9. CLI 실행 방법
 
@@ -230,7 +237,7 @@ python scripts/benchmark_inspector.py --images data/sample_images --runs 50
 
 512×512 단일 카메라 기준 **~50 fps** 처리. PNG I/O와 결과 이미지 저장을 포함한 end-to-end 사이클 타임이고, 알고리즘 자체는 더 짧습니다. 멀티 카메라 라인에서는 `InspectionEngine`의 stateless 설계 덕분에 인스펙션 큐를 멀티스레드로 확장 가능합니다.
 
-### 12.3 데이터셋 평가 — 두 operating point
+### 12.3 합성 평가셋 — 두 operating point
 
 80장 합성 평가셋 (정상 28장 + 결함 52장, 조명 그라데이션 + specular highlight + paint grain 포함):
 
@@ -244,11 +251,45 @@ python scripts/evaluate_dataset.py --dataset data/eval --out data/eval_runs
 | **default** (`min_contour_area_px=30`) | 0.650 | 0.650 | **1.000** | 0.788 | 52 / 0 / 28 / 0 | 모든 NG 검출, 정상의 specular highlight를 오인 |
 | **tuned** (`min_contour_area_px=500`) | 0.838 | **1.000** | 0.750 | 0.857 | 39 / 28 / 0 / 13 | 오검출 0, 작은 dot 결함은 노이즈 floor 아래로 누락 |
 
-실 라인 운영에서는 “부적합품 출하 위험 vs. 과검 비용”에 따라 둘 사이에서 튜닝합니다. 본 엔진은 두 operating point가 한 파라미터 변경으로 이동 가능하다는 점을 평가 하네스가 정량적으로 입증합니다. 카테고리별로는 **scratch/stain/mixed 결함은 두 설정 모두 100% 정확**, **dot 결함은 default에서 100% / tuned에서 0%**.
+실 라인 운영에서는 "부적합품 출하 위험 vs. 과검 비용"에 따라 둘 사이에서 튜닝합니다. 본 엔진은 두 operating point가 한 파라미터 변경으로 이동 가능하다는 점을 평가 하네스가 정량적으로 입증합니다. 카테고리별로는 **scratch/stain/mixed 결함은 두 설정 모두 100% 정확**, **dot 결함은 default에서 100% / tuned에서 0%**.
 
-이 평가 하네스는 동일 CLI로 MVTec-AD / KolektorSDD2 / Severstal에 그대로 사용할 수 있습니다. 절차는 [`docs/dataset_evaluation.md`](docs/dataset_evaluation.md) 참고.
+### 12.4 실 데이터셋 평가 — Magnetic Tile defect (392 images)
 
-### 12.4 3D stereo mini-demo
+공개 표면 결함 데이터셋 [Magnetic-tile-defect-datasets](https://github.com/abin24/Magnetic-tile-defect-datasets) 을 동일 엔진으로 평가했습니다. 정상 200장 + 결함 192장 (5개 카테고리: Blowhole, Break, Crack, Fray, Uneven). 합성 데이터에 한 번도 노출된 적 없는 “first contact” 결과입니다.
+
+```bash
+git clone https://github.com/abin24/Magnetic-tile-defect-datasets..git /tmp/mtd
+python scripts/prepare_magnetic_tile.py --src /tmp/mtd --out data/datasets/magnetic_tile
+python scripts/evaluate_dataset.py --dataset data/datasets/magnetic_tile --out data/eval_runs/mtd_default
+```
+
+| 카테고리 | n | accuracy | recall (NG) |
+| --- | ---: | ---: | ---: |
+| MT_Blowhole | 40 | 1.00 | **1.00** |
+| MT_Break | 40 | 1.00 | **1.00** |
+| MT_Crack | 40 | 1.00 | **1.00** |
+| MT_Fray | 32 | 1.00 | **1.00** |
+| MT_Uneven | 40 | 1.00 | **1.00** |
+| normal (MT_Free) | 200 | 0.00 | n/a (전부 false NG) |
+| **overall** | **392** | **0.49** | **1.00** |
+
+**모든 5개 결함 카테고리에서 100% recall — 어떤 결함도 놓치지 않음.** 동시에 200장 정상 타일 전체가 false NG로 잡힘. 시각적 원인은 명백합니다.
+
+| 실 결함 (MT_Crack) — TP | 정상 (MT_Free) — FP |
+| --- | --- |
+| ![mtd-crack](docs/images/mtd/result_MT_Crack.png) | ![mtd-normal](docs/images/mtd/result_normal.png) |
+
+자성 타일의 자연 결정/표면 grain이 “local mean보다 어두운 픽셀”이라는 adaptive threshold의 기준을 그대로 만족시키기 때문입니다. `--adaptive-block-size`, `--adaptive-c`, `--min-contour-area-px`, `--max-defect-count` 4축으로 그리드 sweep을 돌려도 default보다 의미 있게 좋은 operating point가 없습니다 (TP/TN 동시 향상이 안 됨 — 한쪽을 올리면 다른 쪽이 떨어짐).
+
+**이것이 룰베이스 단독의 본질적 한계이고, 실제 라인 적용 시 다음 중 하나로 해결합니다:**
+
+1. **광학/조명 보강** — dome light / coaxial light / polarizer 로 정반사·표면 grain의 시각적 영향을 줄임 (공고의 “2D/3D 광학계 및 조명 테스트” 업무 영역). 현재 엔진은 100% recall이므로 lighting 보강만으로도 normal grain이 약해지면 precision이 따라 올라옴.
+2. **Cascade with learned classifier** — 룰베이스 엔진이 1차 후보를 100% recall로 잡고, CNN 분류기가 “텍스처 vs 진짜 결함”을 2차 분류. 룰베이스의 100% recall이 cascade의 floor 보장.
+3. **Background model** — 정상 타일 N장으로 표면 텍스처의 통계 모델을 만들어 빼낸 후 잔차에 threshold. 본 POC 범위 밖.
+
+**평가 하네스는 동일 CLI로 MVTec-AD / KolektorSDD2 / Severstal에 그대로 적용 가능**합니다. 절차는 [`docs/dataset_evaluation.md`](docs/dataset_evaluation.md) 참고.
+
+### 12.5 3D stereo mini-demo
 
 `scripts/stereo_demo.py`는 합성 스테레오 페어를 생성하고 StereoSGBM disparity + depth jump anomaly를 시각화합니다. "BUMP" 영역은 표면 휘도가 배경과 같지만 **깊이가 다르므로** 2D 룰베이스로는 못 잡고 3D만 잡을 수 있습니다.
 
@@ -256,7 +297,7 @@ python scripts/evaluate_dataset.py --dataset data/eval --out data/eval_runs
 
 흰 영역이 BUMP (배경보다 가까움, 높은 disparity), 빨간 점은 “주변 median disparity와 4px 이상 차이” = depth anomaly. 자세한 내용은 [`docs/stereo_3d.md`](docs/stereo_3d.md).
 
-### 12.5 JSON 리포트 스키마 (`scratch_surface.png` 실 출력)
+### 12.6 JSON 리포트 스키마 (`scratch_surface.png` 실 출력)
 
 ```json
 {
@@ -319,8 +360,8 @@ machine-vision-inspection-poc/
 
 ## 15. 한계점
 
-- 합성 이미지 기반 검증이 중심이며, 실제 광학계 / 조명 / 카메라 캘리브레이션은 적용되어 있지 않습니다. (단, MVTec-AD 등 실데이터셋으로 동일 엔진을 평가할 수 있는 하네스는 포함되어 있습니다.)
-- 룰베이스 검사만 다루며 학습 기반 결함 분류(예: CNN segmentation)는 다루지 않습니다.
+- 합성 + 1종 실 데이터셋 (Magnetic Tile, 392장) 검증까지 진행했으며, 실 광학계 / 조명 / 카메라 캘리브레이션은 적용되지 않았습니다. 실 데이터셋 결과는 §12.4에 정직하게 게시되어 있습니다 — 100% recall이지만 텍스처 풍부한 표면에서는 precision 0.49로, 룰베이스 단독의 한계가 정량적으로 드러납니다.
+- 룰베이스 검사만 다루며 학습 기반 결함 분류(예: CNN segmentation)는 다루지 않습니다. 실 데이터 결과는 cascade(룰베이스 1차 후보 + 학습 분류기 2차) 또는 dome/coaxial 조명이 필수임을 시사합니다.
 - Modbus TCP 어댑터는 실 프로토콜이지만 검증은 in-process pymodbus 서버에 대한 라운드트립 수준입니다. Robot은 여전히 in-memory 시뮬레이터입니다 (UR/ABB RTDE 어댑터는 향후 작업).
 - 3D 데모는 합성 스테레오 페어로 disparity와 깊이 점프 가시화까지 보이는 mini-demo입니다 — 본격 point cloud / plane-fit 파이프라인은 후속 작업입니다.
 

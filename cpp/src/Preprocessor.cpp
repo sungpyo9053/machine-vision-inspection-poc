@@ -29,9 +29,11 @@ cv::Mat Preprocessor::denoise(const cv::Mat& gray) const {
     return blurred;
 }
 
-cv::Mat Preprocessor::thresholdImage(const cv::Mat& gray) const {
+cv::Mat Preprocessor::thresholdImage(const cv::Mat& gray,
+                                     const InspectionConfig& cfg) const {
     // Adaptive threshold: a pixel is foreground only if it is meaningfully
-    // (>= 10 gray levels) darker than its local 51x51 neighbourhood mean.
+    // (>= cfg.adaptiveC gray levels) darker than its local
+    // cfg.adaptiveBlockSize x cfg.adaptiveBlockSize neighbourhood mean.
     //
     // Why not Otsu: Otsu always picks SOME threshold, even when the image
     // contains no defects. On a flat surface with mild lighting non-uniformity
@@ -43,11 +45,19 @@ cv::Mat Preprocessor::thresholdImage(const cv::Mat& gray) const {
     // Canny edges still feed in so that thin scratches -- whose interior is
     // not particularly darker than the local mean -- are caught via the edge
     // response and then closed into a single contour.
+    int blockSize = cfg.adaptiveBlockSize;
+    if (blockSize < 3) blockSize = 3;
+    if (blockSize % 2 == 0) blockSize += 1;
+    // Block size must also fit in the image. We can't know image size from
+    // here easily, so we just cap it to a sane upper bound; OpenCV will
+    // complain if blockSize > min(h, w).
+    if (blockSize > 501) blockSize = 501;
+
     cv::Mat darkBlobs;
     cv::adaptiveThreshold(gray, darkBlobs, 255,
                           cv::ADAPTIVE_THRESH_GAUSSIAN_C,
                           cv::THRESH_BINARY_INV,
-                          51, 10);
+                          blockSize, cfg.adaptiveC);
 
     cv::Mat edges;
     cv::Canny(gray, edges, 50, 150);
@@ -64,14 +74,15 @@ cv::Mat Preprocessor::thresholdImage(const cv::Mat& gray) const {
     return combined;
 }
 
-cv::Mat Preprocessor::preprocess(const cv::Mat& input) const {
+cv::Mat Preprocessor::preprocess(const cv::Mat& input,
+                                 const InspectionConfig& cfg) const {
     cv::Mat gray = toGray(input);
     if (gray.empty()) {
         return cv::Mat();
     }
     cv::Mat equalized = applyCLAHE(gray);
     cv::Mat smoothed = denoise(equalized);
-    return thresholdImage(smoothed);
+    return thresholdImage(smoothed, cfg);
 }
 
 }  // namespace mvi

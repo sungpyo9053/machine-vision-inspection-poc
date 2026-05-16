@@ -21,6 +21,8 @@ void printUsage() {
         "                   [--max-defect-area-mm2 <double>]\n"
         "                   [--max-defect-length-mm <double>]\n"
         "                   [--min-contour-area-px <int>]\n"
+        "                   [--adaptive-block-size <int>]  # odd, default 51\n"
+        "                   [--adaptive-c <double>]        # default 10\n"
         "                   [--benchmark <N>]   # repeat the inspection N times\n"
         "                                       # and print timing statistics\n";
 }
@@ -65,6 +67,12 @@ int main(int argc, char** argv) {
         } else if (opt == "--min-contour-area-px") {
             if (!needsValue(i, argc, argv, opt)) return EXIT_FAILURE;
             cfg.minContourAreaPx = std::stoi(argv[i]);
+        } else if (opt == "--adaptive-block-size") {
+            if (!needsValue(i, argc, argv, opt)) return EXIT_FAILURE;
+            cfg.adaptiveBlockSize = std::stoi(argv[i]);
+        } else if (opt == "--adaptive-c") {
+            if (!needsValue(i, argc, argv, opt)) return EXIT_FAILURE;
+            cfg.adaptiveC = std::stod(argv[i]);
         } else if (opt == "--benchmark") {
             if (!needsValue(i, argc, argv, opt)) return EXIT_FAILURE;
             benchmarkRuns = std::stoi(argv[i]);

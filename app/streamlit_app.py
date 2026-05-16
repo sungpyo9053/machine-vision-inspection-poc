@@ -124,7 +124,7 @@ def main() -> None:
         st.subheader("원본 이미지")
         if image_path and os.path.isfile(image_path):
             st.image(image_path, channels="BGR" if False else "RGB",
-                     use_column_width=True)
+                     use_container_width=True)
         else:
             st.info("좌측 사이드바에서 이미지를 선택하거나 업로드해 주세요.")
 
@@ -158,7 +158,7 @@ def main() -> None:
         with col_result:
             st.subheader("검사 결과 이미지")
             if run.result_image_path and os.path.isfile(run.result_image_path):
-                st.image(run.result_image_path, use_column_width=True)
+                st.image(run.result_image_path, use_container_width=True)
             else:
                 st.warning("결과 이미지를 찾을 수 없습니다.")
 
