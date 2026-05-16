@@ -1,6 +1,8 @@
 # Loosely based on Google C++ style with 4-space indentation to match the
 # existing source layout. Keep this in sync with how the repo is already
 # written so `clang-format -i` is a no-op on clean code.
+---
+Language: Cpp
 BasedOnStyle: Google
 IndentWidth: 4
 TabWidth: 4

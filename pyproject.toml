@@ -1,5 +1,5 @@
-# Minimal pyproject — only the build-config that needs to live in the repo.
-# We are not packaging this project for PyPI; pytest is the primary consumer.
+# Minimal pyproject. We are not packaging this project for PyPI; pytest is
+# the primary consumer of this file.
 
 [tool.pytest.ini_options]
 minversion = "7.0"

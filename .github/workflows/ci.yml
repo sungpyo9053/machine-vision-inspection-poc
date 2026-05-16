@@ -11,8 +11,10 @@ jobs:
   build-and-test:
     name: build + ctest + pytest (ubuntu-latest)
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -20,14 +22,16 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install Python deps
+      - name: Install Python dependencies
         run: pip install -r requirements.txt
 
       - name: Generate sample images
         run: python scripts/generate_sample_images.py
 
       - name: Install cmake / g++ / OpenCV
-        run: sudo apt-get update && sudo apt-get install -y cmake g++ libopencv-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libopencv-dev
 
       - name: Configure CMake (with GoogleTest)
         run: cmake -S cpp -B build -DVISION_INSPECTOR_BUILD_TESTS=ON

@@ -50,13 +50,15 @@ set_target_properties(vision_inspector PROPERTIES
 message(STATUS "OpenCV version: ${OpenCV_VERSION}")
 message(STATUS "OpenCV include dirs: ${OpenCV_INCLUDE_DIRS}")
 
-# --- GoogleTest (optional) ---------------------------------------------------
+# ----------------------------------------------------------------------------
+# GoogleTest (optional, requires network access for FetchContent)
+# ----------------------------------------------------------------------------
 if(VISION_INSPECTOR_BUILD_TESTS)
     include(FetchContent)
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG        v1.14.0
+        GIT_TAG v1.14.0
     )
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
