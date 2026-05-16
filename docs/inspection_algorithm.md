@@ -18,7 +18,7 @@ applyCLAHE()     ─ Contrast Limited Adaptive Histogram Equalization
 denoise()        ─ GaussianBlur(5×5, σ=1.2)
   │
   ▼
-thresholdImage() ─ Otsu(BINARY_INV) ∨ Canny(50,150)
+thresholdImage() ─ adaptiveThreshold(GAUSSIAN_C, BINARY_INV, 51, 10) ∨ Canny(50,150)
   │                + morphology close → open (3×3 ellipse)
   ▼
 findContours()   ─ RETR_EXTERNAL, CHAIN_APPROX_SIMPLE
@@ -41,7 +41,7 @@ verdict()        ─ OK / NG 판정
 - **grayscale 변환**: 검사 대상이 단색 표면이라 채널 정보 없이도 결함 후보를 충분히 분리할 수 있다. 메모리/연산 비용을 줄이는 동시에 후속 알고리즘의 입력 가정과도 맞춘다.
 - **CLAHE**: 도장면/금속 표면은 조명 위치에 따라 좌우 밝기 차이가 크다. 전역 히스토그램 평활화는 하이라이트 영역에서 결함을 깎아먹지만, CLAHE는 8×8 타일 단위로 보정해서 국소 명암을 살린다.
 - **GaussianBlur**: 센서 노이즈와 텍스처 그레인이 contour 단계에서 false positive를 만든다. 작은 5×5 커널로 가볍게 평활화해서 노이즈만 죽이고 결함의 경계는 유지한다.
-- **Otsu + Canny 동시 사용**: 얼룩/이물처럼 면적이 있는 결함은 Otsu(BINARY_INV)가 잘 분리한다. 반면 스크래치처럼 가늘고 긴 결함은 Otsu 임계에서 누락되기 쉬워 Canny 엣지가 필요하다. 두 결과를 OR로 합쳐 두 유형 모두 잡는다.
+- **Adaptive threshold + Canny 동시 사용**: 얼룩/이물처럼 면적이 있는 결함은 `cv::adaptiveThreshold(GAUSSIAN_C, BINARY_INV, blockSize=51, C=10)`가 잘 분리한다. 51×51 local mean보다 10 이상 어두운 픽셀만 foreground로 잡으므로, 평탄한 표면(정상 부품)에서는 거의 foreground가 생기지 않는다. **Otsu를 쓰지 않는 이유**: Otsu는 결함이 없는 이미지에서도 늘 어떤 threshold를 만들기 때문에, 약한 조명 그라데이션만 있어도 “어두운 쪽 절반”을 거대 foreground 블롭으로 잡아 phantom NG를 낸다. Adaptive는 local mean이 표면을 따라가므로 이런 오판이 없다. 한편 스크래치처럼 “내부가 주변보다 크게 어둡진 않지만 엣지 응답은 강한” 결함은 adaptive가 놓치므로 Canny를 함께 OR한다.
 - **morphology close → open**: 스크래치 엣지가 점선처럼 끊겨서 contour가 잘게 쪼개지는 것을 close가 메운다. 그 다음 open으로 살아남은 1~2 px짜리 노이즈를 제거한다.
 - **contour 검출**: `RETR_EXTERNAL`로 외곽만 추출한다. 결함 내부의 hole까지 잡으면 한 결함이 여러 개로 카운트되어 판정이 흔들린다.
 - **노이즈 필터**: 픽셀 단위 최소 면적(`min_contour_area_px`, 기본 30 px) 이하의 contour를 버린다.

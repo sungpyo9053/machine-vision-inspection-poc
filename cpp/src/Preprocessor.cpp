@@ -30,18 +30,30 @@ cv::Mat Preprocessor::denoise(const cv::Mat& gray) const {
 }
 
 cv::Mat Preprocessor::thresholdImage(const cv::Mat& gray) const {
-    // Combine Otsu and Canny so that we catch both blob-like defects (stains,
-    // dots) and elongated edges (scratches). Each method alone misses one of
-    // the two classes on real surface images.
-    cv::Mat otsu;
-    cv::threshold(gray, otsu, 0, 255,
-                  cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+    // Adaptive threshold: a pixel is foreground only if it is meaningfully
+    // (>= 10 gray levels) darker than its local 51x51 neighbourhood mean.
+    //
+    // Why not Otsu: Otsu always picks SOME threshold, even when the image
+    // contains no defects. On a flat surface with mild lighting non-uniformity
+    // it tends to split the image in half and flag the dark half as one giant
+    // foreground blob, producing a phantom NG result. Adaptive thresholding
+    // self-cancels under uniform illumination because the local mean tracks
+    // the surface itself, so flat areas produce no foreground.
+    //
+    // Canny edges still feed in so that thin scratches -- whose interior is
+    // not particularly darker than the local mean -- are caught via the edge
+    // response and then closed into a single contour.
+    cv::Mat darkBlobs;
+    cv::adaptiveThreshold(gray, darkBlobs, 255,
+                          cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                          cv::THRESH_BINARY_INV,
+                          51, 10);
 
     cv::Mat edges;
     cv::Canny(gray, edges, 50, 150);
 
     cv::Mat combined;
-    cv::bitwise_or(otsu, edges, combined);
+    cv::bitwise_or(darkBlobs, edges, combined);
 
     // Morphological close fills small gaps inside scratch edges so contour
     // detection treats them as one defect instead of a dotted line.
